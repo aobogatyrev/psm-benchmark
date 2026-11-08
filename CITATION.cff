@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this code or the result files, please cite the article and this repository."
+title: "psm-benchmark: a controlled comparison of classical and learning-based estimators of the treatment effect on the treated"
+type: software
+authors:
+  - family-names: Timrova
+    given-names: Nadiia
+    orcid: "https://orcid.org/0009-0003-1031-4919"
+  - family-names: Lobyntsev
+    given-names: Andrii
+    orcid: "https://orcid.org/0009-0004-4263-8368"
+  - family-names: Bogatyrev
+    given-names: Oleksandr
+    orcid: "https://orcid.org/0000-0002-2590-6023"
+version: "1.0.0"
+date-released: "2026-11-08"
+license: MIT
+repository-code: "https://github.com/aobogatyrev/psm-benchmark"
+preferred-citation:
+  type: article
+  title: "Does machine learning improve propensity score matching? A controlled comparison of classical and learning-based estimators of the treatment effect on the treated"
+  authors:
+    - family-names: Timrova
+      given-names: Nadiia
+    - family-names: Lobyntsev
+      given-names: Andrii
+    - family-names: Bogatyrev
+      given-names: Oleksandr
+  journal: "Bulletin of Cherkasy University. Series “Applied Mathematics. Informatics”"
+  year: 2026
