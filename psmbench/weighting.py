@@ -1,4 +1,4 @@
-"""Зважування: IPW для ATT та entropy balancing (Hainmueller 2012)."""
+"""Weighting: IPW for the ATT and entropy balancing (Hainmueller 2012)."""
 from __future__ import annotations
 
 from typing import Optional, Tuple
@@ -8,10 +8,10 @@ from scipy.optimize import minimize
 
 
 def ipw_att_weights(e: np.ndarray, T: np.ndarray, trim: Optional[float] = 0.01) -> np.ndarray:
-    """Ваги ATT: treated → 1, control → e/(1−e). Нормування (Hájek) виконується в estimators.
+    """ATT weights: treated → 1, control → e/(1−e). Normalisation (Hájek) is done in estimators.
 
-    trim: контролі з e > 1−trim (майже напевно «treated» за коваріатами, екстремальні ваги)
-    отримують вагу 0; treated поза спільною областю підтримки контролю також виключаються.
+    trim: controls with e > 1−trim (almost surely "treated" by their covariates, extreme weights)
+    get weight 0; treated units outside the common support of the controls are excluded as well.
     """
     w = np.where(T == 1, 1.0, e / (1 - e))
     if trim is not None and trim > 0:
@@ -23,12 +23,12 @@ def ipw_att_weights(e: np.ndarray, T: np.ndarray, trim: Optional[float] = 0.01) 
 
 
 def _moments(X: np.ndarray, continuous_mask: np.ndarray) -> np.ndarray:
-    """Перший момент усіх коваріат + другий момент неперервних."""
+    """First moments of all covariates + second moments of the continuous ones."""
     cols = [X]
     if continuous_mask.any():
         cols.append(X[:, continuous_mask] ** 2)
     M = np.hstack(cols)
-    # прибрати сталі та дубльовані стовпці (сингулярність)
+    # drop constant and duplicated columns (singularity)
     keep = M.std(axis=0) > 1e-12
     M = M[:, keep]
     _, idx = np.unique(np.round(M.T, 10), axis=0, return_index=True)
@@ -37,16 +37,16 @@ def _moments(X: np.ndarray, continuous_mask: np.ndarray) -> np.ndarray:
 
 def entropy_balancing(X: np.ndarray, T: np.ndarray, continuous_mask: np.ndarray,
                       max_iter: int = 500) -> Tuple[np.ndarray, dict]:
-    """Ваги контролю, що точно відтворюють моменти treated (1-й для всіх, 2-й для неперервних)
-    при мінімальній ентропійній відстані від рівномірних. Двоїста задача (опукла):
+    """Control weights that reproduce the treated moments exactly (1st for all, 2nd for continuous covariates)
+    while staying closest to uniform weights in the entropy sense. Dual problem (convex):
         min_λ  log Σ_j exp(−λ'(c_j − c̄_T)),   w_j ∝ exp(−λ'(c_j − c̄_T)).
-    Повертає ваги над усіма об'єктами (treated → 1, control → w_j, Σ_j w_j = 1).
+    Returns weights over all units (treated → 1, control → w_j, Σ_j w_j = 1).
     """
     tr, co = T == 1, T == 0
     M = _moments(X, continuous_mask)
     target = M[tr].mean(axis=0)
     C = M[co] - target
-    # масштабування стовпців для обумовленості
+    # scale the columns for conditioning
     scale = C.std(axis=0)
     scale[scale == 0] = 1.0
     Cs = C / scale
@@ -67,7 +67,7 @@ def entropy_balancing(X: np.ndarray, T: np.ndarray, continuous_mask: np.ndarray,
     w = np.zeros(len(T))
     w[tr] = 1.0
     w[co] = w_c
-    # залишковий дисбаланс моментів у стандартизованих одиницях (SD відповідного моменту серед контролю)
+    # residual moment imbalance in standardised units (SD of the moment among the controls)
     max_imbalance = float((np.abs((M[co] * w_c[:, None]).sum(axis=0) - target) / scale).max())
     info = {"converged": bool(res.success), "n_moments": int(Cs.shape[1]),
             "max_moment_imbalance": max_imbalance}

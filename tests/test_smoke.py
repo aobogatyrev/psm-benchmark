@@ -1,4 +1,4 @@
-"""Швидкі перевірки коректності (pytest -q tests/). Кожна < 30 с."""
+"""Quick correctness checks (pytest -q tests/). Each takes < 30 s."""
 import sys
 from pathlib import Path
 
@@ -23,7 +23,7 @@ def test_ipw_and_eb_recover_experiment_within_se():
     df, spec = load_dataset("lalonde_nsw_exp")
     for cid in ("M6", "M8"):
         r = estimate(df, spec, CFG[cid], seed=1, bootstrap_B=20)
-        assert abs(r.att - 1794.34) < 2 * 700, cid   # експеримент: SE ≈ 670
+        assert abs(r.att - 1794.34) < 2 * 700, cid   # experiment: SE ≈ 670
 
 
 def test_entropy_balancing_exact_first_moments():
@@ -41,7 +41,7 @@ def test_psm_weights_sum_and_balance_improves():
     df, spec = load_dataset("lalonde_dw_psid")
     r = estimate(df, spec, CFG["M1"], seed=1, bootstrap_B=10)
     T = df[spec.treatment].values
-    assert np.isclose(r.weights[T == 0].sum(), r.n_treated_used)  # кожен treated → 1 контроль сумарною вагою 1
+    assert np.isclose(r.weights[T == 0].sum(), r.n_treated_used)  # every treated unit → one control with total weight 1
     assert r.balance["mean_abs_smd_after"] < r.balance["mean_abs_smd_before"] / 3
     assert np.isfinite(r.se) and r.se > 0
 
@@ -65,7 +65,7 @@ def test_extended_estimators_on_ihdp():
     cfg = {c["id"]: c for c in EXTENDED_CONFIGS}
     df, spec = load_dataset("ihdp", rep=5)
     truth = (df.mu1 - df.mu0).values
-    for cid in ("X1", "X4"):          # аналітичні SE, без бутстрепа
+    for cid in ("X1", "X4"):          # analytic SE, no bootstrap
         r = estimate(df, spec, cfg[cid], seed=1, bootstrap_B=5)
         assert abs(r.att - 4.0) < 1.0 and np.isfinite(r.se) and r.se > 0, cid
     r = estimate(df, spec, cfg["X3"], seed=1, bootstrap_B=5)

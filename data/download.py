@@ -1,30 +1,30 @@
 """
-download.py — відтворюване завантаження даних для експерименту
-«Порівняння методів оцінювання причинного ефекту» (стаття на основі КР Тімрової Н.).
+download.py — reproducible download of the data for the experiment of the article
+"Does machine learning improve propensity score matching?" (Timrova, Lobyntsev, Bogatyrev).
 
-Запуск (з каталогу psm-benchmark/):
-    python data/download.py            # завантажити, перевірити md5, побудувати робочі файли
-    python data/download.py --check    # лише перевірити наявні файли й вивести контрольні статистики
+Usage (from the psm-benchmark/ directory):
+    python data/download.py            # download, verify md5, build the working files
+    python data/download.py --check    # only verify the existing files and print the reference statistics
 
-Залежності: pandas, numpy, pyreadr (для .rda), requests не потрібен (urllib).
+Dependencies: pandas, numpy, pyreadr (for .rda); requests is not needed (urllib).
 
-Джерела
+Sources
 -------
-LaLonde (версія Dehejia & Wahba 1999): R-пакет jjchern/lalonde — точні копії файлів
+LaLonde (Dehejia & Wahba 1999 version): the R package jjchern/lalonde — exact copies of the files
     nswre74_treated.txt / nswre74_control.txt / psid_controls.txt / cps_controls.txt
-    з https://users.nber.org/~rdehejia/data/ (сам NBER із хмарного середовища недоступний).
-IHDP (Hill 2011, setting B, реплікації 1–100): ihdp_npci_1-100.{train,test}.npz —
-    копія файлів Shalit, Johansson & Sontag (2017), дзеркало в репозиторії Osier-Yi/SITE.
-    Train (672) + test (75) кожної реплікації об'єднуються назад у повну вибірку 747.
+    from https://users.nber.org/~rdehejia/data/ (the NBER site itself was not reachable from the build environment).
+IHDP (Hill 2011, setting B, replications 1–100): ihdp_npci_1-100.{train,test}.npz —
+    a copy of the files of Shalit, Johansson & Sontag (2017), mirrored in the Osier-Yi/SITE repository.
+    Train (672) + test (75) of every replication are merged back into the full sample of 747.
 
-Результат
----------
-data/raw/      — оригінальні файли як завантажені (md5 перевіряється)
+Output
+------
+data/raw/      — the original files as downloaded (md5 verified)
 data/lalonde/  — CSV: nsw_dw.csv (445), psid_controls.csv (2490), cps_controls.csv (15992),
-                 nsw.csv (722, оригінальна вибірка LaLonde 1986 без re74);
-                 робочі: lalonde_dw_psid.csv (185 + 2490), lalonde_dw_cps.csv (185 + 15992),
-                 lalonde_nsw_exp.csv (185 + 260, експериментальний еталон)
-data/ihdp/     — ihdp_npci_1-100.csv.gz (74 700 рядків: rep, idx, split, treat, y_factual,
+                 nsw.csv (722, the original LaLonde 1986 sample without re74);
+                 working files: lalonde_dw_psid.csv (185 + 2490), lalonde_dw_cps.csv (185 + 15992),
+                 lalonde_nsw_exp.csv (185 + 260, experimental benchmark)
+data/ihdp/     — ihdp_npci_1-100.csv.gz (74,700 rows: rep, idx, split, treat, y_factual,
                  y_cfactual, mu0, mu1, x1..x25)
 """
 from __future__ import annotations
@@ -59,7 +59,7 @@ RAW_FILES = {
                                  "8b1f1e63cb05102ed1d8257b0cba9544"),
 }
 
-# Контрольні значення з табл. 1 Dehejia & Wahba (1999), AER/JASA; допуск 0.5 %
+# Reference values from Table 1 of Dehejia & Wahba (1999); tolerance 0.5 %
 EXPECTED = {
     "nsw_dw": {"n": 445, "treated": 185, "re78_treated": 6349.14, "re78_control": 4554.80},
     "psid_controls": {"n": 2490, "age": 34.85, "re74": 19428.75, "re78": 21553.92},
@@ -79,14 +79,14 @@ def md5(path: Path) -> str:
 def fetch(name: str, url: str, expected_md5: str) -> Path:
     dest = RAW / name
     if dest.exists() and md5(dest) == expected_md5:
-        print(f"  ok   {name} (вже є, md5 збігається)")
+        print(f"  ok   {name} (already present, md5 matches)")
         return dest
     print(f"  get  {name} ← {url}")
     RAW.mkdir(parents=True, exist_ok=True)
     urllib.request.urlretrieve(url, dest)
     got = md5(dest)
     if got != expected_md5:
-        sys.exit(f"md5 не збігається для {name}: очікувано {expected_md5}, отримано {got}")
+        sys.exit(f"md5 mismatch for {name}: expected {expected_md5}, got {got}")
     print(f"  ok   {name} md5={got}")
     return dest
 
@@ -149,23 +149,23 @@ def close(a: float, b: float, tol: float = 0.005) -> bool:
 
 def check() -> bool:
     ok = True
-    print("\nПеревірка LaLonde (еталон: Dehejia & Wahba 1999, табл. 1)")
+    print("\nChecking LaLonde (reference: Dehejia & Wahba 1999, Table 1)")
     dw = pd.read_csv(LAL / "nsw_dw.csv")
     e = EXPECTED["nsw_dw"]
     t, c = dw[dw.treat == 1].re78.mean(), dw[dw.treat == 0].re78.mean()
     ok &= len(dw) == e["n"] and (dw.treat == 1).sum() == e["treated"] and close(t, e["re78_treated"]) and close(c, e["re78_control"])
-    print(f"  nsw_dw: n={len(dw)}, treated={(dw.treat == 1).sum()}, re78 T={t:.2f} C={c:.2f}, експериментальний ATT={t - c:.2f}  (очікувано 1794.34)")
+    print(f"  nsw_dw: n={len(dw)}, treated={(dw.treat == 1).sum()}, re78 T={t:.2f} C={c:.2f}, experimental ATT={t - c:.2f}  (expected 1794.34)")
     for key in ("psid_controls", "cps_controls"):
         d = pd.read_csv(LAL / f"{key}.csv"); e = EXPECTED[key]
         good = len(d) == e["n"] and close(d.age.mean(), e["age"]) and close(d.re74.mean(), e["re74"]) and close(d.re78.mean(), e["re78"])
         ok &= good
-        print(f"  {key}: n={len(d)}, age={d.age.mean():.2f}, re74={d.re74.mean():.2f}, re78={d.re78.mean():.2f}  {'ok' if good else 'НЕ ЗБІГАЄТЬСЯ'}")
+        print(f"  {key}: n={len(d)}, age={d.age.mean():.2f}, re74={d.re74.mean():.2f}, re78={d.re78.mean():.2f}  {'ok' if good else 'MISMATCH'}")
     for name in ("lalonde_dw_psid", "lalonde_dw_cps", "lalonde_nsw_exp"):
         d = pd.read_csv(LAL / f"{name}.csv")
         naive = d[d.treat == 1].re78.mean() - d[d.treat == 0].re78.mean()
-        print(f"  {name}: n={len(d)} ({(d.treat == 1).sum()}/{(d.treat == 0).sum()}), наївна різниця re78 = {naive:.0f} $")
+        print(f"  {name}: n={len(d)} ({(d.treat == 1).sum()}/{(d.treat == 0).sum()}), naive difference in re78 = {naive:.0f} USD")
 
-    print("\nПеревірка IHDP (Hill 2011, setting B; істинний ATT = 4 за побудовою)")
+    print("\nChecking IHDP (Hill 2011, setting B; true ATT = 4 by construction)")
     i = pd.read_csv(IHDP / "ihdp_npci_1-100.csv.gz")
     g = i.groupby("rep")
     att = g.apply(lambda d: (d.mu1 - d.mu0)[d.treat == 1].mean())
@@ -173,21 +173,21 @@ def check() -> bool:
     e = EXPECTED_IHDP
     good = g.ngroups == e["reps"] and (g.size() == e["n_per_rep"]).all() and (g.treat.sum() == e["treated_per_rep"]).all() and np.allclose(att, e["true_att"], atol=1e-6)
     ok &= good
-    print(f"  реплікацій={g.ngroups}, n/реплікацію={g.size().unique()}, treated/реплікацію={g.treat.sum().unique()}")
-    print(f"  істинний ATT: {att.mean():.3f} (sd {att.std():.3f}); істинний ATE: {ate.mean():.3f} (sd {ate.std():.3f})  {'ok' if good else 'НЕ ЗБІГАЄТЬСЯ'}")
-    print("\nУСЕ ГАРАЗД" if ok else "\nЄ РОЗБІЖНОСТІ — дані не використовувати")
+    print(f"  replications={g.ngroups}, n per replication={g.size().unique()}, treated per replication={g.treat.sum().unique()}")
+    print(f"  true ATT: {att.mean():.3f} (sd {att.std():.3f}); true ATE: {ate.mean():.3f} (sd {ate.std():.3f})  {'ok' if good else 'MISMATCH'}")
+    print("\nALL CHECKS PASSED" if ok else "\nMISMATCHES FOUND — do not use the data")
     return ok
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--check", action="store_true", help="лише перевірити наявні файли")
+    ap.add_argument("--check", action="store_true", help="only verify the existing files")
     args = ap.parse_args()
     if not args.check:
-        print("Завантаження оригінальних файлів у data/raw/")
+        print("Downloading the original files into data/raw/")
         for name, (url, h) in RAW_FILES.items():
             fetch(name, url, h)
-        print("Побудова робочих файлів")
+        print("Building the working files")
         build_lalonde()
         build_ihdp()
     sys.exit(0 if check() else 1)

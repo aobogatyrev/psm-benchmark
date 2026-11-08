@@ -1,11 +1,11 @@
-"""Конфігурації естиматорів (ядро M0–M14 + M1+, розширення X*, сітка чутливості S*).
+"""Estimator configurations (core M0–M14 + M1+, extensions X*, sensitivity grid S*).
 
-Ідентифікатори відповідають плану експерименту. Параметри:
-  caliper_sd   — caliper у одиницях SD логіту схильності (0.2 — Austin 2011)
-  replacement  — зіставлення з повторним вибором контролю
-  k            — контролів на одного treated
-  bandwidth    — ширина вікна ядерного зіставлення на шкалі ймовірності
-  trim         — IPW: контролі з e > 1−trim отримують вагу 0
+Identifiers follow the experimental protocol. Parameters:
+  caliper_sd   — caliper in units of the SD of the propensity logit (0.2 — Austin 2011)
+  replacement  — matching with replacement of controls
+  k            — controls per treated unit
+  bandwidth    — kernel-matching bandwidth on the probability scale
+  trim         — IPW: controls with e > 1−trim get weight 0
   outcome_model, crossfit — AIPW
 """
 from __future__ import annotations
@@ -38,19 +38,19 @@ CORE_CONFIGS: List[dict] = [
     {"id": "M13", "family": "matching", "estimator": "psm_kernel", "ps_model": "rf",
      "params": {"bandwidth": 0.06, "kernel": "epanechnikov"}, "se_method": "bootstrap"},
     {"id": "M14", "family": "weighting", "estimator": "ipw", "ps_model": "rf", "params": {"trim": 0.01}, "se_method": "bootstrap"},
-    # лише LaLonde: специфікація Dehejia–Wahba
+    # LaLonde only: Dehejia–Wahba specification
     {"id": "M1+", "family": "matching", "estimator": "psm_nn", "ps_model": "lr_dw", "params": dict(_PSM11),
      "se_method": "ai", "datasets": ["lalonde_dw_psid", "lalonde_dw_cps", "lalonde_nsw_exp"]},
 ]
 
 EXTENDED_CONFIGS: List[dict] = [
-    # Потребують doubleml (X1) та econml (X4): pip install doubleml econml
+    # Require doubleml (X1) and econml (X4): pip install doubleml econml
     {"id": "X1", "family": "doubly_robust", "estimator": "dml_irm", "ps_model": None,
      "params": {"trim": 0.01, "crossfit": 5}, "se_method": "analytic"},
     {"id": "X2", "family": "doubly_robust", "estimator": "aipw", "ps_model": "gbm",
      "params": {"trim": 0.01, "outcome_model": "gbm", "crossfit": 5}, "se_method": "bootstrap"},
     {"id": "X3", "family": "cate", "estimator": "xlearner", "ps_model": "gbm", "params": {},
-     "se_method": "bootstrap", "bootstrap_B": 100},  # верхня межа B: 5 GBM на репліку
+     "se_method": "bootstrap", "bootstrap_B": 100},  # upper bound on B: 5 GBMs per resample
     {"id": "X4", "family": "cate", "estimator": "causal_forest", "ps_model": None,
      "params": {"n_estimators": 1000}, "se_method": "analytic"},
 ]

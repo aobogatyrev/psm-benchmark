@@ -1,13 +1,13 @@
-"""run_experiment.py — один вхід для всіх запусків.
+"""run_experiment.py — single entry point for all runs.
 
-Приклади:
-  python run_experiment.py --dataset lalonde_nsw_exp --configs core --seeds 1 --bootstrap 50   # швидка перевірка
+Examples:
+  python run_experiment.py --dataset lalonde_nsw_exp --configs core --seeds 1 --bootstrap 50   # quick check
   python run_experiment.py --dataset lalonde_dw_psid --configs core --seeds 10 --bootstrap 500
   python run_experiment.py --dataset ihdp --reps 1-100 --configs core --bootstrap 200 --jobs 4
   python run_experiment.py --dataset lalonde_dw_psid --configs sensitivity --seeds 10 --bootstrap 200
 
-Кожен запуск (dataset, rep, config, seed) → один рядок у results/runs.csv (append; дублікати
-за ключем замінюються) і рядки SMD по коваріатах у results/balance.csv.
+Every run (dataset, rep, config, seed) → one row in results/runs.csv (append; duplicates
+by key are replaced) and per-covariate SMD rows in results/balance.csv.
 """
 from __future__ import annotations
 
@@ -82,9 +82,9 @@ def upsert(path: Path, new: pd.DataFrame, key):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", required=True)
-    ap.add_argument("--reps", default="1", help="для ihdp: '1-100' або '1,2,5'")
-    ap.add_argument("--configs", default="core", help="core | extended | sensitivity | all | список id через кому")
-    ap.add_argument("--seeds", type=int, default=1, help="кількість seeds (для LaLonde); для ihdp — 1 на реплікацію")
+    ap.add_argument("--reps", default="1", help="for ihdp: '1-100' or '1,2,5'")
+    ap.add_argument("--configs", default="core", help="core | extended | sensitivity | all | comma-separated list of ids")
+    ap.add_argument("--seeds", type=int, default=1, help="number of seeds (LaLonde); for ihdp — 1 per replication")
     ap.add_argument("--bootstrap", type=int, default=500)
     ap.add_argument("--jobs", type=int, default=1)
     ap.add_argument("--out", default="results")
@@ -106,7 +106,7 @@ def main():
         for cfg in cfgs:
             for s in rep_seeds:
                 jobs.append((args.dataset, rep, cfg, s, args.bootstrap))
-    print(f"{len(jobs)} запусків: dataset={args.dataset}, configs={[c['id'] for c in cfgs]}, "
+    print(f"{len(jobs)} runs: dataset={args.dataset}, configs={[c['id'] for c in cfgs]}, "
           f"reps={reps if reps != [None] else '-'}, bootstrap B={args.bootstrap}, jobs={args.jobs}")
 
     t0 = time.time()
@@ -117,13 +117,13 @@ def main():
     out = Path(args.out); out.mkdir(exist_ok=True)
     runs = upsert(out / "runs.csv", rows, KEY)
     upsert(out / "balance.csv", bal, KEY + ["covariate"])
-    print(f"готово за {time.time() - t0:.0f} с; у runs.csv тепер {len(runs)} рядків")
+    print(f"done in {time.time() - t0:.0f} s; runs.csv now has {len(runs)} rows")
 
     show = ["config_id", "ps_model", "att", "se", "ci_low", "ci_high", "bias", "frac_treated_used",
             "ess_control", "mean_abs_smd_after", "max_abs_smd_after"]
     summary = rows.groupby(["config_id", "ps_model"], sort=False)[[c for c in show if c not in ("config_id", "ps_model")]].median(numeric_only=True)
     with pd.option_context("display.width", 200, "display.max_columns", 30, "display.float_format", "{:.3f}".format):
-        print("\nМедіани по запусках:")
+        print("\nMedians over runs:")
         print(summary)
 
 

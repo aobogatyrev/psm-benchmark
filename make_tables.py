@@ -1,9 +1,9 @@
-"""make_tables.py — таблиці Т1–Т5 статті з results/runs.csv та results/balance.csv.
+"""make_tables.py — tables T1–T5 of the article from results/runs.csv and results/balance.csv.
 
     python make_tables.py [--results results] [--out results/tables]
 
-Виводить CSV і Markdown для кожної таблиці. Числа агрегуються по seeds (LaLonde) або по
-реплікаціях (IHDP): середнє, а для ATT додатково SD між seeds як міра Монте-Карло-варіації.
+Writes CSV and Markdown for every table. Numbers are aggregated over seeds (LaLonde) or over
+replications (IHDP): the mean, and for the ATT also the SD across seeds as a measure of Monte Carlo variation.
 """
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ from psmbench import CORE_CONFIGS, load_dataset  # noqa: E402
 
 ORDER = [c["id"] for c in CORE_CONFIGS] + ["X1", "X2", "X3", "X4"]
 LABEL = {
-    "M0": "Наївна різниця", "M1": "PSM 1:1 NN, з повт. вибором", "M2": "PSM 1:1 NN, без повт. вибору",
-    "M3": "PSM 3:1 NN", "M4": "PSM ядерне", "M5": "Mahalanobis 1:1", "M6": "IPW", "M7": "AIPW",
-    "M8": "Entropy balancing", "M9": "PSM 1:1 NN", "M10": "PSM ядерне", "M11": "IPW",
-    "M12": "PSM 1:1 NN", "M13": "PSM ядерне", "M14": "IPW", "M1+": "PSM 1:1 NN (специф. DW)",
+    "M0": "Naive difference", "M1": "PSM 1:1 NN, with replacement", "M2": "PSM 1:1 NN, without replacement",
+    "M3": "PSM 3:1 NN", "M4": "PSM kernel", "M5": "Mahalanobis 1:1", "M6": "IPW", "M7": "AIPW",
+    "M8": "Entropy balancing", "M9": "PSM 1:1 NN", "M10": "PSM kernel", "M11": "IPW",
+    "M12": "PSM 1:1 NN", "M13": "PSM kernel", "M14": "IPW", "M1+": "PSM 1:1 NN (DW specification)",
     "X1": "DML (PLR)", "X2": "AIPW (ML, cross-fit)", "X3": "X-learner", "X4": "Causal forest",
 }
 PS_LABEL = {"": "—", "lr": "LR", "lr_dw": "LR+", "gbm": "GBM", "rf": "RF"}
@@ -47,14 +47,14 @@ def t1_datasets(out: Path):
     for name in ("lalonde_dw_psid", "lalonde_dw_cps", "lalonde_nsw_exp"):
         df, spec = load_dataset(name)
         T = df[spec.treatment].values; Y = df[spec.outcome].values
-        rows.append({"Набір": name, "N treated": int((T == 1).sum()), "N control": int((T == 0).sum()),
-                     "Коваріат": len(spec.covariates), "Результат": spec.outcome,
-                     "Еталон ATT": spec.true_att, "Наївна різниця": Y[T == 1].mean() - Y[T == 0].mean()})
+        rows.append({"Dataset": name, "N treated": int((T == 1).sum()), "N control": int((T == 0).sum()),
+                     "Covariates": len(spec.covariates), "Outcome": spec.outcome,
+                     "Reference ATT": spec.true_att, "Naive difference": Y[T == 1].mean() - Y[T == 0].mean()})
     df, spec = load_dataset("ihdp", rep=1)
     T = df[spec.treatment].values; Y = df[spec.outcome].values
-    rows.append({"Набір": "ihdp (100 реплікацій)", "N treated": int((T == 1).sum()), "N control": int((T == 0).sum()),
-                 "Коваріат": 25, "Результат": "y_factual", "Еталон ATT": 4.0,
-                 "Наївна різниця": Y[T == 1].mean() - Y[T == 0].mean()})
+    rows.append({"Dataset": "ihdp (100 replications)", "N treated": int((T == 1).sum()), "N control": int((T == 0).sum()),
+                 "Covariates": 25, "Outcome": "y_factual", "Reference ATT": 4.0,
+                 "Naive difference": Y[T == 1].mean() - Y[T == 0].mean()})
     save(pd.DataFrame(rows), out, "T1_datasets", "%.2f")
 
 
@@ -65,8 +65,8 @@ def t2_balance(bal: pd.DataFrame, out: Path, dataset="lalonde_dw_psid", configs=
     before = b[b.config_id == configs[0]].groupby("covariate")["smd_before"].mean()
     after = b.groupby(["covariate", "config_id"])["smd_after"].mean().unstack("config_id")
     after = after[[c for c in configs if c in after.columns]]
-    after.columns = [f"після {LABEL[c]}" for c in after.columns]
-    tab = pd.concat([before.rename("SMD до"), after], axis=1).reset_index()
+    after.columns = [f"after {LABEL[c]}" for c in after.columns]
+    tab = pd.concat([before.rename("SMD before"), after], axis=1).reset_index()
     cov_order = {c: i for i, c in enumerate(["age", "educ", "black", "hispan", "married", "nodegree", "re74", "re75"])}
     tab = tab.sort_values("covariate", key=lambda s: s.map(cov_order))
     save(tab, out, f"T2_balance_{dataset}")
@@ -82,7 +82,7 @@ def t3_lalonde(runs: pd.DataFrame, out: Path, dataset="lalonde_dw_psid"):
                 covered=("covered", "mean"), frac_treated=("frac_treated_used", "mean"),
                 ess_control=("ess_control", "mean"), mean_abs_smd=("mean_abs_smd_after", "mean"),
                 max_abs_smd=("max_abs_smd_after", "mean"), n_seeds=("seed", "nunique")).reset_index()
-    tab.insert(1, "Естиматор", tab.config_id.map(LABEL))
+    tab.insert(1, "Estimator", tab.config_id.map(LABEL))
     tab["ps_model"] = tab.ps_model.fillna("").map(PS_LABEL)
     save(_order(tab), out, f"T3_main_{dataset}", "%.2f")
 
@@ -99,13 +99,13 @@ def t4_ihdp(runs: pd.DataFrame, out: Path):
                 mean_abs_smd=("mean_abs_smd_after", "mean"), pehe=("pehe", "mean"),
                 n_reps=("rep", "nunique")).reset_index()
     tab["ci_len"] = g.apply(lambda d: (d.ci_high - d.ci_low).mean()).values
-    tab.insert(1, "Естиматор", tab.config_id.map(LABEL))
+    tab.insert(1, "Estimator", tab.config_id.map(LABEL))
     tab["ps_model"] = tab.ps_model.fillna("").map(PS_LABEL)
     save(_order(tab), out, "T4_main_ihdp")
 
 
 def t5_ps_quality(runs: pd.DataFrame, out: Path):
-    # лише конфігурації ядра (M6/M11/M14): рядки сітки чутливості S-M6-trim* мають інший trim
+    # core configurations only (M6/M11/M14): the sensitivity-grid rows S-M6-trim* use a different trim
     r = runs[(runs.estimator == "ipw") & ~runs.config_id.str.startswith("S-")].copy()
     r = r.dropna(subset=["ps_auc"])
     if r.empty:

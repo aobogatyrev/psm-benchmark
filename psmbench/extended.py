@@ -1,17 +1,17 @@
-"""Розширені естиматори (блок X плану): DML-IRM, X-learner, causal forest.
+"""Extended estimators (block X of the protocol): DML-IRM, X-learner, causal forest.
 
-Усі три повертають (att, se_or_None, w_or_None, cate_or_None):
-  att  — оцінка ATT;
-  se   — аналітична SE, якщо метод її дає (DML, causal forest); інакше None → бутстреп в estimators;
-  w    — вектор ваг для діагностики балансу (IPW-ваги за власною e(X)), або None;
-  cate — індивідуальні ефекти τ̂(X_i) для PEHE (лише X-learner і causal forest).
+All three return (att, se_or_None, w_or_None, cate_or_None):
+  att  — ATT estimate;
+  se   — analytic SE if the method provides one (DML, causal forest); otherwise None → bootstrap in estimators;
+  w    — weight vector for the balance diagnostics (IPW weights from the method's own e(X)), or None;
+  cate — individual effects τ̂(X_i) for PEHE (X-learner and causal forest only).
 
-X1  DML-IRM, score='ATTE' (Chernozhukov et al. 2018; реалізація пакета doubleml):
-    нюсанси g(X,T)=E[Y|X,T] та m(X)=P(T=1|X) — GBM, 5-fold cross-fitting, SE з впливової функції.
-X3  X-learner (Künzel et al. 2019), базові моделі GBM; τ(x) = e(x)·τ0(x) + (1−e(x))·τ1(x);
-    ATT = mean τ̂(X_i) по treated. SE — бутстреп (дорогий: 5 GBM на репліку).
-X4  Causal forest (Athey, Tibshirani, Wager 2019) у формі CausalForestDML пакета econml:
-    ортогоналізація за GBM-нюсансами, 1 000 чесних дерев; ATT і SE — effect_inference на treated.
+X1  DML-IRM, score='ATTE' (Chernozhukov et al. 2018; implementation of the doubleml package):
+    nuisances g(X,T)=E[Y|X,T] and m(X)=P(T=1|X) — GBM, 5-fold cross-fitting, influence-function SE.
+X3  X-learner (Künzel et al. 2019), GBM base learners; τ(x) = e(x)·τ0(x) + (1−e(x))·τ1(x);
+    ATT = mean τ̂(X_i) over the treated. SE — bootstrap (expensive: 5 GBMs per resample).
+X4  Causal forest (Athey, Tibshirani, Wager 2019) as CausalForestDML of the econml package:
+    orthogonalisation on GBM nuisances, 1,000 honest trees; ATT and SE — effect_inference on the treated.
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def dml_irm_att(X: np.ndarray, Y: np.ndarray, T: np.ndarray, seed: int = 0, n_fo
     m.fit()
     att = float(np.asarray(m.coef).ravel()[0])
     se = float(np.asarray(m.se).ravel()[0])
-    # ваги для балансу — IPW за cross-fitted m(X)
+    # weights for balance — IPW from the cross-fitted m(X)
     e = None
     try:
         e = np.asarray(m.predictions["ml_m"]).reshape(len(T), -1).mean(axis=1)
@@ -65,8 +65,8 @@ def xlearner_att(X: np.ndarray, Y: np.ndarray, T: np.ndarray, e: np.ndarray, see
     tr, co = T == 1, T == 0
     mu0 = _gbm_reg(seed).fit(X[co], Y[co])
     mu1 = _gbm_reg(seed + 1).fit(X[tr], Y[tr])
-    d1 = Y[tr] - mu0.predict(X[tr])            # імпутовані ефекти для treated
-    d0 = mu1.predict(X[co]) - Y[co]            # для контролю
+    d1 = Y[tr] - mu0.predict(X[tr])            # imputed effects for the treated
+    d0 = mu1.predict(X[co]) - Y[co]            # for the controls
     tau1 = _gbm_reg(seed + 2).fit(X[tr], d1)
     tau0 = _gbm_reg(seed + 3).fit(X[co], d0)
     cate = e * tau0.predict(X) + (1 - e) * tau1.predict(X)

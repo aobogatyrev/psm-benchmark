@@ -1,4 +1,4 @@
-covariate,SMD до,"після PSM 1:1 NN, з повт. вибором",після PSM ядерне,після IPW,після Entropy balancing
+covariate,SMD before,"after PSM 1:1 NN, with replacement",after PSM kernel,after IPW,after Entropy balancing
 age,-1.009,0.260,0.173,0.200,0.000
 educ,-0.681,0.000,0.007,0.058,-0.000
 black,0.593,0.016,-0.004,-0.031,0.000

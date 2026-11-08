@@ -20,7 +20,7 @@ figures are produced from these files by `make_tables.py` and `make_figures.py`.
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt              # + pip install doubleml econml for X1–X4
 python data/download.py                      # downloads the public data and checks them (see data/README.md)
-python -m pytest -q tests/                   # 6 smoke tests, ~10 s
+python -m pytest -q tests/                   # 7 smoke tests, ~30 s
 python run_experiment.py --dataset lalonde_nsw_exp --configs core --seeds 1 --bootstrap 30   # ~3 min
 ```
 
@@ -29,7 +29,7 @@ Full run used in the article (≈ 12–14 h on 4 cores; resumable, step by step)
 ```bash
 bash run_full.sh                              # → results/final/runs.csv, balance.csv
 python make_tables.py  --results results/final
-python make_figures.py --results results/final --lang en
+python make_figures.py --results results/final            # add --lang uk for Ukrainian labels
 ```
 
 ## Layout
@@ -51,9 +51,9 @@ psm-benchmark/
   run_experiment.py       CLI → results/<out>/runs.csv (+ balance.csv)
   run_full.sh             the full protocol of the article as resumable steps
   make_tables.py          T1–T5 (CSV + Markdown) from runs.csv / balance.csv
-  make_figures.py         F1–F5 (PNG + PDF); --lang en for English labels
+  make_figures.py         F1–F5 (PNG + PDF); English labels by default, --lang uk for Ukrainian
   tests/test_smoke.py
-  results/final/          runs.csv, balance.csv, tables/, figures/ (uk), figures_en/ (en)
+  results/final/          runs.csv, balance.csv, tables/, figures/ (en), figures_uk/ (uk)
 ```
 
 ## Configurations

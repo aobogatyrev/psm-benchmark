@@ -1,12 +1,12 @@
-"""Єдиний інтерфейс естиматорів ATT.
+"""Single interface of the ATT estimators.
 
-Конфігурація — словник:
+A configuration is a dict:
   id, family, estimator ∈ {naive, psm_nn, psm_kernel, mahalanobis, ipw, aipw, eb},
   ps_model ∈ {lr, lr_dw, gbm, rf, None}, params {...}, se_method ∈ {analytic, ai, bootstrap}.
 
-Усі естиматори повертають вектор ваг w над усіма спостереженнями; ATT = w-середнє Y
-серед treated − w-середнє Y серед control. Для AIPW точкова оцінка містить поправку
-на модель результату, але ваги для балансу — ті самі IPW-ваги.
+All estimators return a weight vector w over all observations; ATT = w-weighted mean of Y
+among the treated − w-weighted mean of Y among the controls. For AIPW the point estimate includes
+the outcome-model correction, but the weights used for balance are the same IPW weights.
 """
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def _outcome_model(kind: str, seed: int):
 
 
 def _point(df: pd.DataFrame, spec, cfg: dict, seed: int, want_details: bool = False):
-    """Точкова оцінка. Повертає (att, w, details)."""
+    """Point estimate. Returns (att, w, details)."""
     p = cfg.get("params", {})
     est = cfg["estimator"]
     T = df[spec.treatment].astype(int).values
@@ -132,7 +132,7 @@ def _point(df: pd.DataFrame, spec, cfg: dict, seed: int, want_details: bool = Fa
         used = T == 1
 
     else:
-        raise ValueError(f"невідомий естиматор {est}")
+        raise ValueError(f"unknown estimator {est}")
 
     if est == "aipw":
         att = _aipw_att(X, Y, T, ps.e, w, p, seed)
@@ -144,9 +144,9 @@ def _point(df: pd.DataFrame, spec, cfg: dict, seed: int, want_details: bool = Fa
 
 
 def _aipw_att(X, Y, T, e, w, p, seed):
-    """Подвійно робастна оцінка ATT (нормовані ваги):
+    """Doubly robust ATT estimate (normalised weights):
        τ = mean_{T=1}(Y − m0(X)) − Σ_{T=0} w_j (Y_j − m0(X_j)) / Σ_{T=0} w_j,  w_j = e/(1−e).
-    m0 — модель результату на контролі; crossfit=K>1 → K-fold перехресне підганяння (для ML)."""
+    m0 — outcome model fitted on the controls; crossfit=K>1 → K-fold cross-fitting (for ML models)."""
     kind = p.get("outcome_model", "linear")
     K = p.get("crossfit", 1)
     co = T == 0
@@ -175,7 +175,7 @@ def estimate(df: pd.DataFrame, spec, cfg: dict, seed: int = 0, bootstrap_B: int 
 
     se_method = cfg.get("se_method", "bootstrap")
     info: Dict[str, object] = {}
-    bootstrap_B = min(cfg.get("bootstrap_B", bootstrap_B), bootstrap_B)  # ліміт конфігурації — верхня межа
+    bootstrap_B = min(cfg.get("bootstrap_B", bootstrap_B), bootstrap_B)  # the configuration limit is an upper bound
     if se_method == "analytic" and cfg["estimator"] == "naive":
         v = Y[T == 1].var(ddof=1) / (T == 1).sum() + Y[T == 0].var(ddof=1) / (T == 0).sum()
         se = float(np.sqrt(v)); ci = (att - 1.96 * se, att + 1.96 * se)
@@ -183,7 +183,7 @@ def estimate(df: pd.DataFrame, spec, cfg: dict, seed: int = 0, bootstrap_B: int 
         se = float(d["se_analytic"]); ci = (att - 1.96 * se, att + 1.96 * se)
     elif se_method == "ai":
         score = d.get("score")
-        if score is None:  # Mahalanobis: сусіди для σ² — за першою головною компонентою стандартизованих X
+        if score is None:  # Mahalanobis: neighbours for σ² — on the first principal component of standardised X
             X = df[spec.covariates].astype(float).values
             Xs = (X - X.mean(0)) / np.where(X.std(0) > 0, X.std(0), 1)
             score = Xs @ np.linalg.svd(Xs, full_matrices=False)[2][0]
@@ -198,7 +198,7 @@ def estimate(df: pd.DataFrame, spec, cfg: dict, seed: int = 0, bootstrap_B: int 
     else:
         se, ci = np.nan, (np.nan, np.nan)
 
-    if w is None:  # метод без вагового подання (causal forest): баланс не визначено
+    if w is None:  # method without a weight representation (causal forest): balance is undefined
         tab = smd_table(df, T, np.ones(len(T)), spec.covariates, spec.continuous)
         tab["smd_after"] = np.nan
     else:

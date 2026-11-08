@@ -1,4 +1,4 @@
-"""Діагностика балансу коваріат на зваженій вибірці."""
+"""Covariate-balance diagnostics on the weighted sample."""
 from __future__ import annotations
 
 from typing import Dict, List
@@ -13,10 +13,10 @@ def _wmean(x, w):
 
 def smd_table(df: pd.DataFrame, T: np.ndarray, w: np.ndarray, covariates: List[str],
               continuous: List[str]) -> pd.DataFrame:
-    """SMD до (рівні ваги) та після (ваги w) для кожної коваріати.
+    """SMD before (uniform weights) and after (weights w) for every covariate.
 
-    Знаменник — об'єднане SD ДО зіставлення (стандарт cobalt), однаковий для «до» і «після»,
-    щоб зміни SMD відображали зміни середніх, а не дисперсій. Для бінарних — сира різниця часток.
+    The denominator is the pooled SD BEFORE balancing (cobalt convention), the same for "before" and "after",
+    so that changes in SMD reflect changes in means, not in variances. For binary covariates — raw difference in proportions.
     """
     tr, co = T == 1, T == 0
     rows = []

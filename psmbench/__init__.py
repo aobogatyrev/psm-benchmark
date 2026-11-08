@@ -1,9 +1,9 @@
-"""psmbench — порівняння методів оцінювання ATT на бенчмарках LaLonde та IHDP.
+"""psmbench — a comparison of ATT estimators on the LaLonde and IHDP benchmarks.
 
-Усі естиматори зводяться до одного подання: вектор ваг w над усіма спостереженнями,
-ATT = зважене середнє Y серед treated − зважене середнє Y серед control.
-Завдяки цьому баланс (SMD), ефективний розмір вибірки та бутстреп рахуються однаково
-для зіставлення, зважування, подвійно робастних і балансувальних методів.
+Every estimator is reduced to one representation: a weight vector w over all observations,
+ATT = weighted mean of Y among the treated − weighted mean of Y among the controls.
+Balance (SMD), the effective sample size and the bootstrap are therefore computed identically
+for matching, weighting, doubly robust and balancing methods.
 """
 from .data import DatasetSpec, load_dataset, list_datasets  # noqa: F401
 from .estimators import estimate, EstimateResult  # noqa: F401
