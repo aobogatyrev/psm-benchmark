@@ -1,5 +1,7 @@
 # psm-benchmark
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24061647.svg)](https://doi.org/10.5281/zenodo.24061647)
+
 Code, result files and figures for the article
 
 > Timrova N., Lobyntsev A., Bogatyrev O. **Does machine learning improve propensity score matching? A controlled comparison of classical and learning-based estimators of the treatment effect on the treated.** *Bulletin of Cherkasy University. Series “Applied Mathematics. Informatics”*, 2026 (submitted).
@@ -96,7 +98,9 @@ The script verifies file checksums and the reference statistics of Table 1 in De
 
 ## Citation
 
-See `CITATION.cff`. Please cite the article above and, for the software, this repository.
+The version used in the article is archived at Zenodo: v1.0.0 — https://doi.org/10.5281/zenodo.24061648
+(concept DOI for all versions: https://doi.org/10.5281/zenodo.24061647). Please cite the article above and,
+for the software, this repository (see `CITATION.cff`).
 
 ## License
 

@@ -15,6 +15,14 @@ authors:
 version: "1.0.0"
 date-released: "2026-11-08"
 license: MIT
+doi: 10.5281/zenodo.24061648
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24061648
+    description: "Zenodo archive of version v1.0.0"
+  - type: doi
+    value: 10.5281/zenodo.24061647
+    description: "Zenodo concept DOI (all versions)"
 repository-code: "https://github.com/aobogatyrev/psm-benchmark"
 preferred-citation:
   type: article
